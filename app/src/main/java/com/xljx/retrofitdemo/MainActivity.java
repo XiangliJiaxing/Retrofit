@@ -7,6 +7,8 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.vito.encrypt.MD5;
+import com.xljx.retrofitdemo.data.LoginResult;
+import com.xljx.retrofitdemo.data.TimeStamp;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,7 +16,6 @@ import java.util.List;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -78,44 +79,54 @@ public class MainActivity extends AppCompatActivity {
 
     private interface TimeStampService {
         @GET("base/authoriza/login/getTimestamp.htm")
-        Call<ResponseBody> get();
+        Call<TimeStamp> get();
     }
 
     private interface LoginService {
         @FormUrlEncoded
         @POST("base/authoriza/login/userLoginPhone.htm")
-        Call<ResponseBody> login(@Field("userCode") String username, @Field("password") String password);
+        Call<LoginResult> login(@Field("userCode") String username, @Field("password") String password);
     }
 
     private void addListener() {
         mTextView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Call<ResponseBody> result = retrofit.create(TimeStampService.class).get();
-                result.enqueue(new Callback<ResponseBody>() {
+                Call<TimeStamp> result = retrofit.create(TimeStampService.class).get();
+                result.enqueue(new Callback<TimeStamp>() {
                     @Override
-                    public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
-                        String json = response.body().toString();
+                    public void onResponse(Call<TimeStamp> call, Response<TimeStamp> response) {
+                        TimeStamp timeStamp = response.body();
+                        String json = timeStamp.toString();
 
                         LoginService loginService = retrofit.create(LoginService.class);
-                        String send_pwd = MD5.getMD5("123456" + mTimeStamp);
-                        Call<ResponseBody> loginCall = loginService.login("nn001", send_pwd);
-                        loginCall.enqueue(new Callback<ResponseBody>() {
+                        String send_pwd = MD5.getMD5("123456") + timeStamp.getData();
+                        Call<LoginResult> loginCall = loginService.login("nn001", send_pwd);
+                        loginCall.enqueue(new Callback<LoginResult>() {
                             @Override
-                            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                            public void onResponse(Call<LoginResult> call, Response<LoginResult> response) {
+//                                try {
+//                                    Log.i(TAG, response.body().string().toString()); // json
+//                                } catch (IOException e) {
+//                                    e.printStackTrace();
+//                                }
+
                                 Log.i(TAG, response.body().toString());
+                                Log.i(TAG, response.message()); // OK
+                                int code = response.code();
+
                             }
 
                             @Override
-                            public void onFailure(Call<ResponseBody> call, Throwable t) {
-
+                            public void onFailure(Call<LoginResult> call, Throwable t) {
+                                Log.e(TAG, t.getMessage());
                             }
                         });
                     }
 
                     @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-
+                    public void onFailure(Call<TimeStamp> call, Throwable t) {
+                        Log.e(TAG, t.getMessage());
                     }
                 });
 //                if(result.isExecuted()){
